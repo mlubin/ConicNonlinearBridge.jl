@@ -1,5 +1,8 @@
 module ConicNonlinearBridge
 
-# package code goes here
+using MathProgBase
+using JuMP
+
+include("conic_nlp_wrapper.jl")
 
 end # module
