@@ -19,5 +19,4 @@ This wrapper is experimental. If you are experiencing convergence troubles with 
 
 TODO:
 
-  1. Presolve linear constraints to infer variable bounds
-  2. Phase I for better infeasibility detection
+  1. Phase I for better infeasibility detection

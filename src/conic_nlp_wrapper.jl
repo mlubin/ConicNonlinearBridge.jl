@@ -63,18 +63,6 @@ function MathProgBase.loadconicproblem!(
     @defVar(nlp_model, x[i=1:m.numVar], start = 1)
     
     @setObjective(nlp_model, Min, dot(c,x))
-    for (cone,ind) in new_constr_cones
-        if cone == :Zero
-            @addConstraint(nlp_model, A[ind,:]*x .== b[ind])
-        elseif cone == :NonNeg
-            @addConstraint(nlp_model, A[ind,:]*x .<= b[ind])
-        elseif cone == :NonPos
-            @addConstraint(nlp_model, A[ind,:]*x .>= b[ind])
-        else
-            error("unrecognized cone $cone")
-        end
-    end
-
 
     for (cone, ind) in new_var_cones
         if cone == :Zero
@@ -101,6 +89,69 @@ function MathProgBase.loadconicproblem!(
             setLower(x[ind[3]], 0.0)
         end
     end
+
+    # *************** PREPROCESS *******************
+    constr_cones_map = [:NoCone for i in 1:numConstr]
+    for (cone, ind) in new_constr_cones
+        constr_cones_map[ind] = cone
+    end
+
+    nonZeroElements = [Any[] for i in 1:numConstr] # by row
+    for i in 1:length(A_I)
+        push!(nonZeroElements[A_I[i]], (A_J[i], A_V[i]))
+    end
+    remRowInd = Any[]
+    rowIndicator = [false for i in 1:numConstr]
+    for i in 1:numConstr
+        if length(nonZeroElements[i]) == 1
+            (ind, val) = nonZeroElements[i][1]
+            #@show full(A[i,:])
+            #@show b[i]
+            #@show ind, val
+            if constr_cones_map[i] == :Zero
+                setLower(x[ind], b[i]/val)
+                setUpper(x[ind], b[i]/val)
+                #println("x[$ind] == $(b[i]/val)")
+            elseif constr_cones_map[i] == :NonNeg
+                if val < 0.0
+                    setLower(x[ind], b[i]/val)
+                else
+                    setUpper(x[ind], b[i]/val)
+                    #println("x[$ind] <= $(b[i]/val)")
+                end
+            elseif constr_cones_map[i] == :NonPos
+                if val < 0.0
+                    setUpper(x[ind], b[i]/val)
+                else
+                    setLower(x[ind], b[i]/val)
+                    #println("x[$ind] >= $(b[i]/val)")
+                end
+            else
+                error("!!!!")
+            end
+        else
+            rowIndicator[i] = true
+            push!(remRowInd, i)
+        end
+    end
+
+    rowIndicator = [true for i in 1:numConstr]
+    for (cone,ind) in new_constr_cones
+        for i in 1:length(ind)
+            if rowIndicator[ind[i]]
+                if cone == :Zero
+                    @addConstraint(nlp_model, A[ind[i],:]*x .== b[ind[i]])
+                elseif cone == :NonNeg
+                    @addConstraint(nlp_model, A[ind[i],:]*x .<= b[ind[i]])
+                elseif cone == :NonPos
+                    @addConstraint(nlp_model, A[ind[i],:]*x .>= b[ind[i]])
+                else
+                    error("unrecognized cone $cone")
+                end
+            end
+        end
+    end
+
     m.x = x
     m.numVar = numVar
     m.nlp_model = nlp_model
