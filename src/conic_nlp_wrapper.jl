@@ -1,6 +1,6 @@
 # Authors: Emre Yamangil and Miles Lubin
 
-type ConicNLPModel <: MathProgBase.AbstractMathProgModel
+type ConicNLPModel <: MathProgBase.AbstractConicModel
     solution::Vector{Float64}
     status
     objval::Float64
@@ -20,9 +20,9 @@ export ConicNLPWrapper
 immutable ConicNLPWrapper <: MathProgBase.AbstractMathProgSolver
     nlp_solver::MathProgBase.AbstractMathProgSolver
 end
-MathProgBase.model(s::ConicNLPWrapper) = ConicNLPModel(s.nlp_solver)
+MathProgBase.ConicModel(s::ConicNLPWrapper) = ConicNLPModel(s.nlp_solver)
 
-function MathProgBase.loadconicproblem!(
+function MathProgBase.loadproblem!(
     m::ConicNLPModel, c, A, b, constr_cones, var_cones)
 
     nlp_model = Model(solver=m.nlp_solver)
