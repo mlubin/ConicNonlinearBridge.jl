@@ -52,10 +52,9 @@ function MathProgBase.loadproblem!(
             push!(new_constr_cones, (cone, ind))
         end
     end
-    A = sparse(A_I,A_J,A_V)
+    A = sparse(A_I,A_J,A_V, numConstr, numVar + lengthSpecCones)
 
     m.numVar = size(A,2)
-    @assert m.numVar == numVar + lengthSpecCones
     m.numConstr = numConstr 
     c = [c;zeros(m.numVar-numVar)]
 
