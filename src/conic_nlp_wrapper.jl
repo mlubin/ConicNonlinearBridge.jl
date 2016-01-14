@@ -139,11 +139,11 @@ function MathProgBase.loadproblem!(
         for i in 1:length(ind)
             if rowIndicator[ind[i]]
                 if cone == :Zero
-                    @addConstraint(nlp_model, A[ind[i],:]*x .== b[ind[i]])
+                    @addConstraint(nlp_model, A[ind[i]:ind[i],:]*x .== b[ind[i]])
                 elseif cone == :NonNeg
-                    @addConstraint(nlp_model, A[ind[i],:]*x .<= b[ind[i]])
+                    @addConstraint(nlp_model, A[ind[i]:ind[i],:]*x .<= b[ind[i]])
                 elseif cone == :NonPos
-                    @addConstraint(nlp_model, A[ind[i],:]*x .>= b[ind[i]])
+                    @addConstraint(nlp_model, A[ind[i]:ind[i],:]*x .>= b[ind[i]])
                 else
                     error("unrecognized cone $cone")
                 end
