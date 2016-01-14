@@ -3,6 +3,6 @@ module ConicNonlinearBridge
 using MathProgBase
 using JuMP
 
-include("conic_nlp_wrapper.jl")
+include("nonlinear_to_conic.jl")
 
 end # module

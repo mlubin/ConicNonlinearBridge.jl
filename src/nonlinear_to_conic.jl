@@ -1,15 +1,17 @@
+# wrapper to convert Nonlinear solver into Conic solver
+# The translation is lossy...
 # Authors: Emre Yamangil and Miles Lubin
 
-type ConicNLPModel <: MathProgBase.AbstractConicModel
+type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
     solution::Vector{Float64}
     status
     objval::Float64
-    nlp_solver
+    nlp_solver::MathProgBase.AbstractNonlinearModel
     x
     numVar
     numConstr
     nlp_model
-    function ConicNLPModel(nlp_solver)
+    function NonlinearToConicBridge(nlp_solver)
         m = new()
         m.nlp_solver = nlp_solver
         return m
@@ -20,10 +22,10 @@ export ConicNLPWrapper
 immutable ConicNLPWrapper <: MathProgBase.AbstractMathProgSolver
     nlp_solver::MathProgBase.AbstractMathProgSolver
 end
-MathProgBase.ConicModel(s::ConicNLPWrapper) = ConicNLPModel(s.nlp_solver)
+MathProgBase.ConicModel(s::ConicNLPWrapper) = NonlinearToConicBridge(s.nlp_solver)
 
 function MathProgBase.loadproblem!(
-    m::ConicNLPModel, c, A, b, constr_cones, var_cones)
+    m::NonlinearToConicBridge, c, A, b, constr_cones, var_cones)
 
     nlp_model = Model(solver=m.nlp_solver)
     numVar = length(c) # number of variables
@@ -157,7 +159,7 @@ function MathProgBase.loadproblem!(
 
 end
 
-function MathProgBase.optimize!(m::ConicNLPModel)
+function MathProgBase.optimize!(m::NonlinearToConicBridge)
  
     m.status = solve(m.nlp_model)
     m.objval = getObjectiveValue(m.nlp_model)
@@ -167,9 +169,9 @@ end
 
 MathProgBase.supportedcones(s::ConicNLPWrapper) = [:Free,:Zero,:NonNeg,:NonPos,:SOC,:ExpPrimal]
 
-MathProgBase.setwarmstart!(m::ConicNLPModel, x) = (m.solution = x)
-MathProgBase.setvartype!(m::ConicNLPModel, v::Vector{Symbol}) = (m.vartype = v)
+MathProgBase.setwarmstart!(m::NonlinearToConicBridge, x) = (m.solution = x)
+MathProgBase.setvartype!(m::NonlinearToConicBridge, v::Vector{Symbol}) = (m.vartype = v)
 
-MathProgBase.status(m::ConicNLPModel) = m.status
-MathProgBase.getobjval(m::ConicNLPModel) = m.objval
-MathProgBase.getsolution(m::ConicNLPModel) = m.solution
+MathProgBase.status(m::NonlinearToConicBridge) = m.status
+MathProgBase.getobjval(m::NonlinearToConicBridge) = m.objval
+MathProgBase.getsolution(m::NonlinearToConicBridge) = m.solution
