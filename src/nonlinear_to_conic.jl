@@ -6,7 +6,7 @@ type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
     solution::Vector{Float64}
     status
     objval::Float64
-    nlp_solver::MathProgBase.AbstractNonlinearModel
+    nlp_solver::MathProgBase.AbstractMathProgSolver
     x
     numVar
     numConstr
