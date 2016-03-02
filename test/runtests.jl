@@ -12,7 +12,7 @@ tests_exp = ["test_exp.jl"]
 println("Running tests:")
 
 # The following syntax can be used to solve it using other solvers
-set_default_solver(ConicNLPWrapper(IpoptSolver(print_level=0)))
+set_default_solver(ConicNLPWrapper(nlp_solver=IpoptSolver(print_level=0)))
 
 
 for curtest in tests
