@@ -7,13 +7,19 @@ type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
     status
     objval::Float64
     nlp_solver::MathProgBase.AbstractMathProgSolver
+    remove_single_rows
     x
     numVar
     numConstr
     nlp_model
-    function NonlinearToConicBridge(nlp_solver)
+    A_ini
+    b
+    constr_cones_ini
+    var_cones_ini
+    function NonlinearToConicBridge(nlp_solver,remove_single_rows)
         m = new()
         m.nlp_solver = nlp_solver
+        m.remove_single_rows = remove_single_rows
         return m
     end
 end 
@@ -21,15 +27,25 @@ end
 export ConicNLPWrapper
 immutable ConicNLPWrapper <: MathProgBase.AbstractMathProgSolver
     nlp_solver::MathProgBase.AbstractMathProgSolver
+    remove_single_rows
 end
-MathProgBase.ConicModel(s::ConicNLPWrapper) = NonlinearToConicBridge(s.nlp_solver)
+ConicNLPWrapper(;nlp_solver=nothing,remove_single_rows=false) = ConicNLPWrapper(nlp_solver,remove_single_rows)
+MathProgBase.ConicModel(s::ConicNLPWrapper) = NonlinearToConicBridge(s.nlp_solver,s.remove_single_rows)
 
 function MathProgBase.loadproblem!(
     m::NonlinearToConicBridge, c, A, b, constr_cones, var_cones)
 
+    if m.nlp_solver == nothing
+        error("NLP solver is not specified.")
+    end
+
     nlp_model = Model(solver=m.nlp_solver)
     numVar = length(c) # number of variables
     numConstr = length(b) # number of constraints
+    m.A_ini = A
+    m.b = b
+    m.constr_cones_ini = constr_cones
+    m.var_cones_ini = var_cones
 
     # b - Ax \in K => b - Ax = s, s \in K
     new_var_cones = Any[x for x in var_cones]
@@ -101,38 +117,31 @@ function MathProgBase.loadproblem!(
     for i in 1:length(A_I)
         push!(nonZeroElements[A_I[i]], (A_J[i], A_V[i]))
     end
-    remRowInd = Any[]
-    rowIndicator = [false for i in 1:numConstr]
-    for i in 1:numConstr
-        if length(nonZeroElements[i]) == 1
-            (ind, val) = nonZeroElements[i][1]
-            #@show full(A[i,:])
-            #@show b[i]
-            #@show ind, val
-            if constr_cones_map[i] == :Zero
-                setLower(x[ind], b[i]/val)
-                setUpper(x[ind], b[i]/val)
-                #println("x[$ind] == $(b[i]/val)")
-            elseif constr_cones_map[i] == :NonNeg
-                if val < 0.0
+    rowIndicator = [true for i in 1:numConstr]
+    if m.remove_single_rows
+        for i in 1:numConstr
+            if length(nonZeroElements[i]) == 1
+                (ind, val) = nonZeroElements[i][1]
+                if constr_cones_map[i] == :Zero
                     setLower(x[ind], b[i]/val)
-                else
                     setUpper(x[ind], b[i]/val)
-                    #println("x[$ind] <= $(b[i]/val)")
-                end
-            elseif constr_cones_map[i] == :NonPos
-                if val < 0.0
-                    setUpper(x[ind], b[i]/val)
+                elseif constr_cones_map[i] == :NonNeg
+                    if val < 0.0
+                        setLower(x[ind], b[i]/val)
+                    else
+                        setUpper(x[ind], b[i]/val)
+                    end
+                elseif constr_cones_map[i] == :NonPos
+                    if val < 0.0
+                        setUpper(x[ind], b[i]/val)
+                    else
+                        setLower(x[ind], b[i]/val)
+                    end
                 else
-                    setLower(x[ind], b[i]/val)
-                    #println("x[$ind] >= $(b[i]/val)")
+                    error("special cone $(constr_cones_map[i]) in constraint cones after preprocess.")
                 end
-            else
-                error("!!!!")
+                rowIndicator[i] = false
             end
-        else
-            rowIndicator[i] = true
-            push!(remRowInd, i)
         end
     end
 
@@ -163,13 +172,35 @@ function MathProgBase.optimize!(m::NonlinearToConicBridge)
  
     m.status = solve(m.nlp_model)
     m.objval = getObjectiveValue(m.nlp_model)
-    m.solution = getValue(m.x)
+    if (m.status != :Infeasible)
+        m.solution = getValue(m.x)
+    end   
 
 end
 
 MathProgBase.supportedcones(s::ConicNLPWrapper) = [:Free,:Zero,:NonNeg,:NonPos,:SOC,:ExpPrimal]
 
-MathProgBase.setwarmstart!(m::NonlinearToConicBridge, x) = (m.solution = x)
+function MathProgBase.setwarmstart!(m::NonlinearToConicBridge, x) 
+
+    x_expanded = copy(x)
+    val = m.b - m.A_ini*x
+    nonlinear_cones = 0
+    for (cone, ind) in m.constr_cones_ini
+        if cone == :SOC || cone == :ExpPrimal
+            append!(x_expanded, val[ind])
+            nonlinear_cones += 1
+        end
+    end
+    m.solution = x_expanded
+    setValue(m.x, m.solution)
+end
+
+function MathProgBase.freemodel!(m::NonlinearToConicBridge)
+    if applicable(MathProgBase.freemodel!,m.nlp_model.internalModel)
+        MathProgBase.freemodel!(m.nlp_model.internalModel)
+    end
+end
+
 MathProgBase.setvartype!(m::NonlinearToConicBridge, v::Vector{Symbol}) = (m.vartype = v)
 
 MathProgBase.status(m::NonlinearToConicBridge) = m.status
