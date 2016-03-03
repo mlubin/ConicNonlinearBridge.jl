@@ -3,19 +3,26 @@
 # Authors: Emre Yamangil and Miles Lubin
 
 type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
-    solution::Vector{Float64}
-    status
-    objval::Float64
-    nlp_solver::MathProgBase.AbstractMathProgSolver
-    remove_single_rows
-    x
-    numVar
-    numConstr
-    nlp_model
-    A_ini
-    b
-    constr_cones_ini
-    var_cones_ini
+    # SOLUTION DATA
+    solution::Vector{Float64}                       # Vector containing solution
+    status                                          # Termination status of the nlp_solver
+    objval::Float64                                 # Objective value of optimal solution
+
+    # SOLVER DATA
+    nlp_solver::MathProgBase.AbstractMathProgSolver # Choice of nonlinear solver
+    remove_single_rows                              # Preprocessing singleton rows flag
+
+    # PROBLEM DATA
+    x                                               # Variables in nonlinear model
+    numVar                                          # Number of variables in nonlinear model
+    numConstr                                       # Number of constraints in nonlinear model
+    nlp_model                                       # Reference to nonlinear model
+    A_ini                                           # Initial constraint matrix
+    b                                               # Right hand side vector
+    constr_cones_ini                                # Initial constraint cones
+    var_cones_ini                                   # Initial variable cones
+
+    # CONSTRUCTOR
     function NonlinearToConicBridge(nlp_solver,remove_single_rows)
         m = new()
         m.nlp_solver = nlp_solver
