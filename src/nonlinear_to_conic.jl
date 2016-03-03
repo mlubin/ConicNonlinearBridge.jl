@@ -10,7 +10,7 @@ type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
 
     # SOLVER DATA
     nlp_solver::MathProgBase.AbstractMathProgSolver # Choice of nonlinear solver
-    remove_single_rows                              # Preprocessing singleton rows flag
+    remove_single_rows::Bool                        # Preprocessing singleton rows flag
 
     # PROBLEM DATA
     x                                               # Variables in nonlinear model
