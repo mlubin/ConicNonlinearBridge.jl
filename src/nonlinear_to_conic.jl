@@ -177,7 +177,7 @@ end
 
 function MathProgBase.optimize!(m::NonlinearToConicBridge)
  
-    m.status = solve(m.nlp_model)
+    m.status = solve(m.nlp_model, suppress_warnings=true)
     m.objval = getObjectiveValue(m.nlp_model)
     if (m.status != :Infeasible)
         m.solution = getValue(m.x)
