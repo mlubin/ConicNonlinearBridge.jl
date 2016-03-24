@@ -1,3 +1,4 @@
+__precompile__()
 module ConicNonlinearBridge
 
 using MathProgBase
