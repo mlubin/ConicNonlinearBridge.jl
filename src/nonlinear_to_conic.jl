@@ -84,33 +84,33 @@ function MathProgBase.loadproblem!(
     c = [c;zeros(m.numVar-numVar)]
 
     # LOAD NLP MODEL
-    @defVar(nlp_model, x[i=1:m.numVar], start = 1)
+    @variable(nlp_model, x[i=1:m.numVar], start = 1)
     
-    @setObjective(nlp_model, Min, dot(c,x))
+    @objective(nlp_model, Min, dot(c,x))
 
     for (cone, ind) in new_var_cones
         if cone == :Zero
             for i in ind
-                setLower(x[i], 0.0)
-                setUpper(x[i], 0.0)
+                setlowerbound(x[i], 0.0)
+                setupperbound(x[i], 0.0)
             end
         elseif cone == :Free
             # do nothing
         elseif cone == :NonNeg
             for i in ind
-                setLower(x[i], 0.0)
+                setlowerbound(x[i], 0.0)
             end
         elseif cone == :NonPos
             for i in ind
-                setUpper(x[i], 0.0)
+                setupperbound(x[i], 0.0)
             end
         elseif cone == :SOC
-            @addNLConstraint(nlp_model, sqrt(sum{x[i]^2, i in ind[2:length(ind)]}) <= x[ind[1]])
-            setLower(x[ind[1]], 0.0)
+            @NLconstraint(nlp_model, sqrt(sum{x[i]^2, i in ind[2:length(ind)]}) <= x[ind[1]])
+            setlowerbound(x[ind[1]], 0.0)
         elseif cone == :ExpPrimal
-            @addNLConstraint(nlp_model, x[ind[2]] * exp(x[ind[1]]/x[ind[2]]) <= x[ind[3]])
-            setLower(x[ind[2]], 0.0)
-            setLower(x[ind[3]], 0.0)
+            @NLconstraint(nlp_model, x[ind[2]] * exp(x[ind[1]]/x[ind[2]]) <= x[ind[3]])
+            setlowerbound(x[ind[2]], 0.0)
+            setlowerbound(x[ind[3]], 0.0)
         end
     end
 
@@ -130,19 +130,19 @@ function MathProgBase.loadproblem!(
             if length(nonZeroElements[i]) == 1
                 (ind, val) = nonZeroElements[i][1]
                 if constr_cones_map[i] == :Zero
-                    setLower(x[ind], b[i]/val)
-                    setUpper(x[ind], b[i]/val)
+                    setlowerbound(x[ind], b[i]/val)
+                    setupperbound(x[ind], b[i]/val)
                 elseif constr_cones_map[i] == :NonNeg
                     if val < 0.0
-                        setLower(x[ind], b[i]/val)
+                        setlowerbound(x[ind], b[i]/val)
                     else
-                        setUpper(x[ind], b[i]/val)
+                        setupperbound(x[ind], b[i]/val)
                     end
                 elseif constr_cones_map[i] == :NonPos
                     if val < 0.0
-                        setUpper(x[ind], b[i]/val)
+                        setupperbound(x[ind], b[i]/val)
                     else
-                        setLower(x[ind], b[i]/val)
+                        setlowerbound(x[ind], b[i]/val)
                     end
                 else
                     error("special cone $(constr_cones_map[i]) in constraint cones after preprocess.")
@@ -157,11 +157,11 @@ function MathProgBase.loadproblem!(
         for i in 1:length(ind)
             if rowIndicator[ind[i]]
                 if cone == :Zero
-                    @addConstraint(nlp_model, A[ind[i]:ind[i],:]*x .== b[ind[i]])
+                    @constraint(nlp_model, A[ind[i]:ind[i],:]*x .== b[ind[i]])
                 elseif cone == :NonNeg
-                    @addConstraint(nlp_model, A[ind[i]:ind[i],:]*x .<= b[ind[i]])
+                    @constraint(nlp_model, A[ind[i]:ind[i],:]*x .<= b[ind[i]])
                 elseif cone == :NonPos
-                    @addConstraint(nlp_model, A[ind[i]:ind[i],:]*x .>= b[ind[i]])
+                    @constraint(nlp_model, A[ind[i]:ind[i],:]*x .>= b[ind[i]])
                 else
                     error("unrecognized cone $cone")
                 end
@@ -178,9 +178,9 @@ end
 function MathProgBase.optimize!(m::NonlinearToConicBridge)
  
     m.status = solve(m.nlp_model, suppress_warnings=true)
-    m.objval = getObjectiveValue(m.nlp_model)
+    m.objval = getobjectivevalue(m.nlp_model)
     if (m.status != :Infeasible)
-        m.solution = getValue(m.x)
+        m.solution = getvalue(m.x)
     end   
 
 end
@@ -199,7 +199,7 @@ function MathProgBase.setwarmstart!(m::NonlinearToConicBridge, x)
         end
     end
     m.solution = x_expanded
-    setValue(m.x, m.solution)
+    setvalue(m.x, m.solution)
 end
 
 function MathProgBase.freemodel!(m::NonlinearToConicBridge)
