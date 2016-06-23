@@ -9,7 +9,7 @@ Example:
     using Convex, ConicNonlinearBridge, Ipopt
     x = Variable(1)
     problem = maximize(x,exp(x) <= 4)
-    solve!(problem, ConicNLPWrapper(IpoptSolver()))
+    solve!(problem, ConicNLPWrapper(nlp_solver=IpoptSolver()))
 
     evaluate(x) # roughly log(4)
 

@@ -213,3 +213,8 @@ MathProgBase.setvartype!(m::NonlinearToConicBridge, v::Vector{Symbol}) = (m.vart
 MathProgBase.status(m::NonlinearToConicBridge) = m.status
 MathProgBase.getobjval(m::NonlinearToConicBridge) = m.objval
 MathProgBase.getsolution(m::NonlinearToConicBridge) = m.solution
+
+function MathProgBase.numconstr(m::NonlinearToConicBridge)
+    # is numconstr well defined for conic models?
+    return m.numConstr
+end
