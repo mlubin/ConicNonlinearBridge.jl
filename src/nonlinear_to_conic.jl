@@ -208,7 +208,12 @@ function MathProgBase.freemodel!(m::NonlinearToConicBridge)
     end
 end
 
-MathProgBase.setvartype!(m::NonlinearToConicBridge, v::Vector{Symbol}) = (m.vartype = v)
+function MathProgBase.setvartype!(m::NonlinearToConicBridge, v::Vector{Symbol})
+    @assert length(v) <= m.numVar
+    for i in 1:length(v)
+        setcategory(m.x[i], v[i])
+    end
+end
 
 MathProgBase.status(m::NonlinearToConicBridge) = m.status
 MathProgBase.getobjval(m::NonlinearToConicBridge) = m.objval
