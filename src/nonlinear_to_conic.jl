@@ -219,6 +219,7 @@ MathProgBase.status(m::NonlinearToConicBridge) = m.status
 MathProgBase.getobjval(m::NonlinearToConicBridge) = m.objval
 MathProgBase.getsolution(m::NonlinearToConicBridge) = m.solution
 
+MathProgBase.numvar(m::NonlinearToConicBridge) = m.numVar
 function MathProgBase.numconstr(m::NonlinearToConicBridge)
     # is numconstr well defined for conic models?
     return m.numConstr
