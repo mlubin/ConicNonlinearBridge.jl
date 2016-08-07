@@ -63,7 +63,7 @@ function MathProgBase.loadproblem!(
     A_I, A_J, A_V = findnz(A)
     slack_count = numVar+1
     for (cone, ind) in copy_constr_cones
-        if cone == :SOC || cone == :ExpPrimal
+        if cone == :SOC || cone == :ExpPrimal || cone == :SOCRotated
             lengthSpecCones += length(ind)
             slack_vars = slack_count:(slack_count+length(ind)-1)
             append!(A_I, ind)
@@ -107,6 +107,11 @@ function MathProgBase.loadproblem!(
         elseif cone == :SOC
             @NLconstraint(nlp_model, sqrt(sum{x[i]^2, i in ind[2:length(ind)]}) <= x[ind[1]])
             setlowerbound(x[ind[1]], 0.0)
+        elseif cone == :SOCRotated
+            @NLconstraint(nlp_model, 2*x[ind[1]]*x[ind[2]] >= sum{x[i]^2, i in ind[3:length(ind)]})
+            setlowerbound(x[ind[1]], 0.0)
+            setlowerbound(x[ind[2]], 0.0)
+
         elseif cone == :ExpPrimal
             @NLconstraint(nlp_model, x[ind[2]] * exp(x[ind[1]]/x[ind[2]]) <= x[ind[3]])
             setlowerbound(x[ind[2]], 0.0)
@@ -185,7 +190,7 @@ function MathProgBase.optimize!(m::NonlinearToConicBridge)
 
 end
 
-MathProgBase.supportedcones(s::ConicNLPWrapper) = [:Free,:Zero,:NonNeg,:NonPos,:SOC,:ExpPrimal]
+MathProgBase.supportedcones(s::ConicNLPWrapper) = [:Free,:Zero,:NonNeg,:NonPos,:SOC,:SOCRotated,:ExpPrimal]
 
 function MathProgBase.setwarmstart!(m::NonlinearToConicBridge, x) 
 
