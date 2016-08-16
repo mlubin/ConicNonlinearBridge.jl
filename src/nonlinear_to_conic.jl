@@ -11,6 +11,7 @@ type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
     # SOLVER DATA
     nlp_solver::MathProgBase.AbstractMathProgSolver # Choice of nonlinear solver
     remove_single_rows::Bool                        # Preprocessing singleton rows flag
+    disaggregate_soc::Bool                          # Disaggregate SOC into 3-dim cones (experimental)
 
     # PROBLEM DATA
     x                                               # Variables in nonlinear model
@@ -23,10 +24,11 @@ type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
     var_cones_ini                                   # Initial variable cones
 
     # CONSTRUCTOR
-    function NonlinearToConicBridge(nlp_solver,remove_single_rows)
+    function NonlinearToConicBridge(nlp_solver,remove_single_rows,disaggregate_soc)
         m = new()
         m.nlp_solver = nlp_solver
         m.remove_single_rows = remove_single_rows
+        m.disaggregate_soc = disaggregate_soc
         return m
     end
 end 
@@ -35,9 +37,10 @@ export ConicNLPWrapper
 immutable ConicNLPWrapper <: MathProgBase.AbstractMathProgSolver
     nlp_solver::MathProgBase.AbstractMathProgSolver
     remove_single_rows
+    disaggregate_soc
 end
-ConicNLPWrapper(;nlp_solver=nothing,remove_single_rows=false) = ConicNLPWrapper(nlp_solver,remove_single_rows)
-MathProgBase.ConicModel(s::ConicNLPWrapper) = NonlinearToConicBridge(s.nlp_solver,s.remove_single_rows)
+ConicNLPWrapper(;nlp_solver=nothing,remove_single_rows=false,disaggregate_soc=false) = ConicNLPWrapper(nlp_solver,remove_single_rows,disaggregate_soc)
+MathProgBase.ConicModel(s::ConicNLPWrapper) = NonlinearToConicBridge(s.nlp_solver,s.remove_single_rows,s.disaggregate_soc)
 
 function MathProgBase.loadproblem!(
     m::NonlinearToConicBridge, c, A, b, constr_cones, var_cones)
@@ -105,13 +108,20 @@ function MathProgBase.loadproblem!(
                 setupperbound(x[i], 0.0)
             end
         elseif cone == :SOC
-            @NLconstraint(nlp_model, sqrt(sum{x[i]^2, i in ind[2:length(ind)]}) <= x[ind[1]])
-            setlowerbound(x[ind[1]], 0.0)
+            if m.disaggregate_soc && length(ind) > 3
+                socvar = @variable(nlp_model, [2:length(ind)], lowerbound = 0)
+                for k in 2:length(ind)
+                    @NLconstraint(nlp_model, x[ind[k]]^2/x[ind[1]] ≤ socvar[k])
+                end
+                @constraint(nlp_model, sum(socvar) ≤ x[ind[1]])
+            else
+                @NLconstraint(nlp_model, sqrt(sum{x[i]^2, i in ind[2:length(ind)]}) <= x[ind[1]])
+                setlowerbound(x[ind[1]], 0.0)
+            end
         elseif cone == :SOCRotated
-            @NLconstraint(nlp_model, 2*x[ind[1]]*x[ind[2]] >= sum{x[i]^2, i in ind[3:length(ind)]})
+            @NLconstraint(nlp_model, 2*x[ind[1]] >= sum{x[i]^2, i in ind[3:length(ind)]}/x[ind[2]])
             setlowerbound(x[ind[1]], 0.0)
             setlowerbound(x[ind[2]], 0.0)
-
         elseif cone == :ExpPrimal
             @NLconstraint(nlp_model, x[ind[2]] * exp(x[ind[1]]/x[ind[2]]) <= x[ind[3]])
             setlowerbound(x[ind[2]], 0.0)
