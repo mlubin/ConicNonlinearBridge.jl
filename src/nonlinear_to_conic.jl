@@ -208,7 +208,7 @@ function MathProgBase.setwarmstart!(m::NonlinearToConicBridge, x)
     val = m.b - m.A_ini*x
     nonlinear_cones = 0
     for (cone, ind) in m.constr_cones_ini
-        if cone == :SOC || cone == :ExpPrimal
+        if cone == :SOC || cone == :ExpPrimal || cone == :SOCRotated
             append!(x_expanded, val[ind])
             nonlinear_cones += 1
         end
