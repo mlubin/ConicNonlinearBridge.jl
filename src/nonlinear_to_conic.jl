@@ -168,15 +168,18 @@ function MathProgBase.loadproblem!(
     end
 
     rowIndicator = [true for i in 1:numConstr]
+    A_byrow = A'
+    A_colidx = rowvals(A_byrow)
+    A_vals = nonzeros(A_byrow)
     for (cone,ind) in new_constr_cones
         for i in 1:length(ind)
             if rowIndicator[ind[i]]
                 if cone == :Zero
-                    @constraint(nlp_model, A[ind[i]:ind[i],:]*x .== b[ind[i]])
+                    @constraint(nlp_model, sum{ A_vals[k]*x[A_colidx[k]], k in nzrange(A_byrow, ind[i]) } == b[ind[i]])
                 elseif cone == :NonNeg
-                    @constraint(nlp_model, A[ind[i]:ind[i],:]*x .<= b[ind[i]])
+                    @constraint(nlp_model, sum{ A_vals[k]*x[A_colidx[k]], k in nzrange(A_byrow, ind[i]) } <= b[ind[i]])
                 elseif cone == :NonPos
-                    @constraint(nlp_model, A[ind[i]:ind[i],:]*x .>= b[ind[i]])
+                    @constraint(nlp_model, sum{ A_vals[k]*x[A_colidx[k]], k in nzrange(A_byrow, ind[i]) } >= b[ind[i]])
                 else
                     error("unrecognized cone $cone")
                 end
