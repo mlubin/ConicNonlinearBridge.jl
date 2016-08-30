@@ -12,6 +12,7 @@ type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
     nlp_solver::MathProgBase.AbstractMathProgSolver # Choice of nonlinear solver
     remove_single_rows::Bool                        # Preprocessing singleton rows flag
     disaggregate_soc::Bool                          # Disaggregate SOC into 3-dim cones (experimental)
+    soc_as_quadratic::Bool                          # Encode SOC constraints in (non-convex) quadratic form
 
     # PROBLEM DATA
     x                                               # Variables in nonlinear model
@@ -24,11 +25,12 @@ type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
     var_cones_ini                                   # Initial variable cones
 
     # CONSTRUCTOR
-    function NonlinearToConicBridge(nlp_solver,remove_single_rows,disaggregate_soc)
+    function NonlinearToConicBridge(nlp_solver,remove_single_rows,disaggregate_soc,soc_as_quadratic)
         m = new()
         m.nlp_solver = nlp_solver
         m.remove_single_rows = remove_single_rows
         m.disaggregate_soc = disaggregate_soc
+        m.soc_as_quadratic = soc_as_quadratic
         return m
     end
 end 
@@ -38,9 +40,10 @@ immutable ConicNLPWrapper <: MathProgBase.AbstractMathProgSolver
     nlp_solver::MathProgBase.AbstractMathProgSolver
     remove_single_rows
     disaggregate_soc
+    soc_as_quadratic
 end
-ConicNLPWrapper(;nlp_solver=nothing,remove_single_rows=false,disaggregate_soc=false) = ConicNLPWrapper(nlp_solver,remove_single_rows,disaggregate_soc)
-MathProgBase.ConicModel(s::ConicNLPWrapper) = NonlinearToConicBridge(s.nlp_solver,s.remove_single_rows,s.disaggregate_soc)
+ConicNLPWrapper(;nlp_solver=nothing,remove_single_rows=false,disaggregate_soc=false,soc_as_quadratic=false) = ConicNLPWrapper(nlp_solver,remove_single_rows,disaggregate_soc,soc_as_quadratic)
+MathProgBase.ConicModel(s::ConicNLPWrapper) = NonlinearToConicBridge(s.nlp_solver,s.remove_single_rows,s.disaggregate_soc,s.soc_as_quadratic)
 
 function MathProgBase.loadproblem!(
     m::NonlinearToConicBridge, c, A, b, constr_cones, var_cones)
@@ -108,18 +111,30 @@ function MathProgBase.loadproblem!(
                 setupperbound(x[i], 0.0)
             end
         elseif cone == :SOC
+            setlowerbound(x[ind[1]], 0.0)
             if m.disaggregate_soc && length(ind) > 3
                 socvar = @variable(nlp_model, [2:length(ind)], lowerbound = 0)
                 for k in 2:length(ind)
-                    @NLconstraint(nlp_model, x[ind[k]]^2/x[ind[1]] ≤ socvar[k])
+                    if m.soc_as_quadratic
+                        @NLconstraint(nlp_model, x[ind[k]]^2 ≤ socvar[k]*x[ind[1]])
+                    else
+                        @NLconstraint(nlp_model, x[ind[k]]^2/x[ind[1]] ≤ socvar[k])
+                    end
                 end
                 @constraint(nlp_model, sum(socvar) ≤ x[ind[1]])
             else
-                @NLconstraint(nlp_model, sqrt(sum{x[i]^2, i in ind[2:length(ind)]}) <= x[ind[1]])
-                setlowerbound(x[ind[1]], 0.0)
+                if m.soc_as_quadratic
+                    @NLconstraint(nlp_model, sum{x[i]^2, i in ind[2:length(ind)]} <= x[ind[1]]^2)
+                else
+                    @NLconstraint(nlp_model, sqrt(sum{x[i]^2, i in ind[2:length(ind)]}) <= x[ind[1]])
+                end
             end
         elseif cone == :SOCRotated
-            @NLconstraint(nlp_model, 2*x[ind[1]] >= sum{x[i]^2, i in ind[3:length(ind)]}/x[ind[2]])
+            if m.soc_as_quadratic
+                @NLconstraint(nlp_model, 2*x[ind[1]]*x[ind[2]] >= sum{x[i]^2, i in ind[3:length(ind)]})
+            else
+                @NLconstraint(nlp_model, 2*x[ind[1]] >= sum{x[i]^2, i in ind[3:length(ind)]}/x[ind[2]])
+            end
             setlowerbound(x[ind[1]], 0.0)
             setlowerbound(x[ind[2]], 0.0)
         elseif cone == :ExpPrimal
