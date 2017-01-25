@@ -124,16 +124,16 @@ function MathProgBase.loadproblem!(
                 @constraint(nlp_model, sum(socvar) ≤ x[ind[1]])
             else
                 if m.soc_as_quadratic
-                    @NLconstraint(nlp_model, sum{x[i]^2, i in ind[2:length(ind)]} <= x[ind[1]]^2)
+                    @NLconstraint(nlp_model, sum(x[i]^2 for i in ind[2:length(ind)]) <= x[ind[1]]^2)
                 else
-                    @NLconstraint(nlp_model, sqrt(sum{x[i]^2, i in ind[2:length(ind)]}) <= x[ind[1]])
+                    @NLconstraint(nlp_model, sqrt(sum(x[i]^2 for i in ind[2:length(ind)])) <= x[ind[1]])
                 end
             end
         elseif cone == :SOCRotated
             if m.soc_as_quadratic
-                @NLconstraint(nlp_model, 2*x[ind[1]]*x[ind[2]] >= sum{x[i]^2, i in ind[3:length(ind)]})
+                @NLconstraint(nlp_model, 2*x[ind[1]]*x[ind[2]] >= sum(x[i]^2 for i in ind[3:length(ind)]))
             else
-                @NLconstraint(nlp_model, 2*x[ind[1]] >= sum{x[i]^2, i in ind[3:length(ind)]}/x[ind[2]])
+                @NLconstraint(nlp_model, 2*x[ind[1]] >= sum(x[i]^2 for i in ind[3:length(ind)])/x[ind[2]])
             end
             setlowerbound(x[ind[1]], 0.0)
             setlowerbound(x[ind[2]], 0.0)
@@ -190,11 +190,11 @@ function MathProgBase.loadproblem!(
         for i in 1:length(ind)
             if rowIndicator[ind[i]]
                 if cone == :Zero
-                    @constraint(nlp_model, sum{ A_vals[k]*x[A_colidx[k]], k in nzrange(A_byrow, ind[i]) } == b[ind[i]])
+                    @constraint(nlp_model, sum( A_vals[k]*x[A_colidx[k]] for k in nzrange(A_byrow, ind[i]) ) == b[ind[i]])
                 elseif cone == :NonNeg
-                    @constraint(nlp_model, sum{ A_vals[k]*x[A_colidx[k]], k in nzrange(A_byrow, ind[i]) } <= b[ind[i]])
+                    @constraint(nlp_model, sum( A_vals[k]*x[A_colidx[k]] for k in nzrange(A_byrow, ind[i]) ) <= b[ind[i]])
                 elseif cone == :NonPos
-                    @constraint(nlp_model, sum{ A_vals[k]*x[A_colidx[k]], k in nzrange(A_byrow, ind[i]) } >= b[ind[i]])
+                    @constraint(nlp_model, sum( A_vals[k]*x[A_colidx[k]] for k in nzrange(A_byrow, ind[i]) ) >= b[ind[i]])
                 else
                     error("unrecognized cone $cone")
                 end
