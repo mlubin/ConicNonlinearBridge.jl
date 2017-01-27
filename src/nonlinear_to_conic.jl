@@ -251,7 +251,7 @@ end
 MathProgBase.status(m::NonlinearToConicBridge) = m.status
 MathProgBase.getobjval(m::NonlinearToConicBridge) = m.objval
 MathProgBase.getobjbound(m::NonlinearToConicBridge) = MathProgBase.getobjbound(m.nlp_model)
-MathProgBase.getsolution(m::NonlinearToConicBridge) = m.solution
+MathProgBase.getsolution(m::NonlinearToConicBridge) = m.solution[1:size(m.A_ini,2)]
 MathProgBase.getsolvetime(m::NonlinearToConicBridge) = MathProgBase.getsolvetime(m.nlp_model)
 
 MathProgBase.numvar(m::NonlinearToConicBridge) = m.numVar
