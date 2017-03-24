@@ -42,12 +42,12 @@ immutable ConicNLPWrapper <: MathProgBase.AbstractMathProgSolver
     disaggregate_soc
     soc_as_quadratic
 end
+
 ConicNLPWrapper(;nlp_solver=nothing,remove_single_rows=false,disaggregate_soc=false,soc_as_quadratic=false) = ConicNLPWrapper(nlp_solver,remove_single_rows,disaggregate_soc,soc_as_quadratic)
+
 MathProgBase.ConicModel(s::ConicNLPWrapper) = NonlinearToConicBridge(s.nlp_solver,s.remove_single_rows,s.disaggregate_soc,s.soc_as_quadratic)
 
-function MathProgBase.loadproblem!(
-    m::NonlinearToConicBridge, c, A, b, constr_cones, var_cones)
-
+function MathProgBase.loadproblem!(m::NonlinearToConicBridge, c, A, b, constr_cones, var_cones)
     if m.nlp_solver == nothing
         error("NLP solver is not specified.")
     end
@@ -65,6 +65,7 @@ function MathProgBase.loadproblem!(
     new_constr_cones = Any[]
     copy_constr_cones = copy(constr_cones)
     lengthSpecCones = 0
+    
     # ADD SLACKS FOR ONLY SOC AND EXP
     A_I, A_J, A_V = findnz(A)
     slack_count = numVar+1
@@ -205,23 +206,17 @@ function MathProgBase.loadproblem!(
     m.x = x
     m.numVar = numVar
     m.nlp_model = nlp_model
-
 end
 
 function MathProgBase.optimize!(m::NonlinearToConicBridge)
- 
     m.status = solve(m.nlp_model, suppress_warnings=true)
     m.objval = getobjectivevalue(m.nlp_model)
-    if (m.status != :Infeasible)
-        m.solution = getvalue(m.x)
-    end   
-
+    m.solution = getvalue(m.x)
 end
 
 MathProgBase.supportedcones(s::ConicNLPWrapper) = [:Free,:Zero,:NonNeg,:NonPos,:SOC,:SOCRotated,:ExpPrimal]
 
 function MathProgBase.setwarmstart!(m::NonlinearToConicBridge, x) 
-
     x_expanded = copy(x)
     val = m.b - m.A_ini*x
     nonlinear_cones = 0
@@ -255,7 +250,5 @@ MathProgBase.getsolution(m::NonlinearToConicBridge) = m.solution[1:size(m.A_ini,
 MathProgBase.getsolvetime(m::NonlinearToConicBridge) = MathProgBase.getsolvetime(m.nlp_model)
 
 MathProgBase.numvar(m::NonlinearToConicBridge) = m.numVar
-function MathProgBase.numconstr(m::NonlinearToConicBridge)
-    # is numconstr well defined for conic models?
-    return m.numConstr
-end
+# is numconstr well-defined for conic models?
+MathProgBase.numconstr(m::NonlinearToConicBridge) = m.numConstr
