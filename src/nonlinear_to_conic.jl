@@ -250,4 +250,5 @@ MathProgBase.getsolution(m::NonlinearToConicBridge) = m.solution[1:size(m.A_ini,
 MathProgBase.getsolvetime(m::NonlinearToConicBridge) = MathProgBase.getsolvetime(m.nlp_model)
 
 MathProgBase.numvar(m::NonlinearToConicBridge) = m.numVar
+# is numconstr well-defined for conic models?
 MathProgBase.numconstr(m::NonlinearToConicBridge) = m.numConstr
