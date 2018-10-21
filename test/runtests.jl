@@ -1,9 +1,16 @@
 using ConicNonlinearBridge
 using MathProgBase
 using Ipopt
-using Base.Test
 
-include(Pkg.dir("MathProgBase", "test", "conicinterface.jl"))
+using Compat.Test
+using Compat.LinearAlgebra
+using Compat.SparseArrays
+
+#include(Pkg.dir("MathProgBase", "..", "test", "conicinterface.jl"))
+include(joinpath(dirname(pathof(MathProgBase)), "..", "test", "conicinterface.jl"))
+
+
+@testset "ConicNonlinearBridge Tests" begin
 
 @testset "linear and exponential cone tests (remove_single_rows is $remove_single_rows)" for remove_single_rows in [true, false]
     solver = ConicNLPWrapper(nlp_solver=IpoptSolver(print_level=0), remove_single_rows=remove_single_rows)
@@ -31,3 +38,6 @@ end
     MathProgBase.setvartype!(m, [:Cont, :Bin, :Int])
     @test m.nlp_model.colCat == Symbol[:Cont, :Bin, :Int]
 end
+
+end
+
