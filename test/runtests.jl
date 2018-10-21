@@ -31,5 +31,3 @@ end
     MathProgBase.setvartype!(m, [:Cont, :Bin, :Int])
     @test m.nlp_model.colCat == Symbol[:Cont, :Bin, :Int]
 end
-
-return nothing
