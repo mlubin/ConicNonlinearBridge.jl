@@ -6,9 +6,17 @@ using Compat.Test
 using Compat.LinearAlgebra
 using Compat.SparseArrays
 
-#include(Pkg.dir("MathProgBase", "..", "test", "conicinterface.jl"))
-include(joinpath(dirname(pathof(MathProgBase)), "..", "test", "conicinterface.jl"))
 
+if VERSION < v"0.7.0-"
+    mpb_path = Pkg.dir("MathProgBase")
+end
+
+if VERSION > v"0.7.0-"
+    mpb_path = joinpath(dirname(pathof(MathProgBase)), "..")
+end
+
+
+include(joinpath(mpb_path, "test", "conicinterface.jl"))
 
 @testset "ConicNonlinearBridge Tests" begin
 
