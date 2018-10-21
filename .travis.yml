@@ -4,7 +4,6 @@ os:
   - osx
 julia:
   - 0.6
-  # - nightly
 notifications:
   email: false
 sudo: false
@@ -15,3 +14,5 @@ addons:
 #script:
 #  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
 #  - julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("ConicNonlinearBridge"); Pkg.test("ConicNonlinearBridge"; coverage=true)'
+after_success:
+- julia -e 'cd(Pkg.dir("ConicNonlinearBridge")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
