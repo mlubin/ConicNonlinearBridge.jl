@@ -21,13 +21,27 @@ end
     end
 end
 
-@testset "variable types test" begin
+@testset "miscellaneous tests" begin
     # min 0x - 2y - 1z
-    #  st  x == 1, x >= norm(y, z)
+    #  st  x == 1,
+    #      x >= norm(y, z) as constraint cone
     #      x continuous, y binary, z integer
     solver = ConicNLPWrapper(nlp_solver=IpoptSolver(print_level=0))
+    @test issubset([:Free, :Zero, :NonNeg, :NonPos, :SOC, :SOCRotated, :ExpPrimal], MathProgBase.supportedcones(solver))
     m = MathProgBase.ConicModel(solver)
-    MathProgBase.loadproblem!(m, [0, -2, -1], [1 0 0], [1], [(:Zero, 1)], [(:SOC, 1:3)])
+    MathProgBase.loadproblem!(m, [0, -2, -1], [1 0 0; -eye(3)], [1, 0, 0, 0], [(:Zero, 1), (:SOC, 2:4)], [(:Free, 1:3)])
     MathProgBase.setvartype!(m, [:Cont, :Bin, :Int])
-    @test m.nlp_model.colCat == Symbol[:Cont, :Bin, :Int]
+    MathProgBase.setwarmstart!(m, [3, 4, 2])
+    @test m.nlp_model.colCat[1:3] == [:Cont, :Bin, :Int]
+    @test m.solution[1:3] == [3, 4, 2]
+    @test MathProgBase.numvar(m) == 3
+    @show MathProgBase.numconstr(m) == 4
+
+    # make variables continuous and solve
+    MathProgBase.setvartype!(m, [:Cont, :Cont, :Cont])
+    MathProgBase.optimize!(m)
+    @test MathProgBase.status(m) == :Optimal
+    @test MathProgBase.getsolution(m) ≈ [1.0, 0.894427, 0.447214] atol=1e-4 rtol=1e-4
+    @test MathProgBase.getobjval(m) ≈ -2.236067 atol=1e-4 rtol=1e-4
+    MathProgBase.freemodel!(m)
 end
