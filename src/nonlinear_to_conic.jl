@@ -33,7 +33,7 @@ type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
         m.soc_as_quadratic = soc_as_quadratic
         return m
     end
-end 
+end
 
 export ConicNLPWrapper
 immutable ConicNLPWrapper <: MathProgBase.AbstractMathProgSolver
@@ -65,7 +65,7 @@ function MathProgBase.loadproblem!(m::NonlinearToConicBridge, c, A, b, constr_co
     new_constr_cones = Any[]
     copy_constr_cones = copy(constr_cones)
     lengthSpecCones = 0
-    
+
     # ADD SLACKS FOR ONLY SOC AND EXP
     A_I, A_J, A_V = findnz(A)
     slack_count = numVar+1
@@ -76,7 +76,7 @@ function MathProgBase.loadproblem!(m::NonlinearToConicBridge, c, A, b, constr_co
             append!(A_I, ind)
             append!(A_J, slack_vars)
             append!(A_V, ones(length(ind)))
-            
+
             push!(new_var_cones, (cone, slack_vars))
             push!(new_constr_cones, (:Zero, ind))
             slack_count += length(ind)
@@ -87,12 +87,12 @@ function MathProgBase.loadproblem!(m::NonlinearToConicBridge, c, A, b, constr_co
     A = sparse(A_I,A_J,A_V, numConstr, numVar + lengthSpecCones)
 
     m.numVar = size(A,2)
-    m.numConstr = numConstr 
+    m.numConstr = numConstr
     c = [c;zeros(m.numVar-numVar)]
 
     # LOAD NLP MODEL
     @variable(nlp_model, x[i=1:m.numVar], start = 1)
-    
+
     @objective(nlp_model, Min, dot(c,x))
 
     for (cone, ind) in new_var_cones
@@ -216,7 +216,7 @@ end
 
 MathProgBase.supportedcones(s::ConicNLPWrapper) = [:Free,:Zero,:NonNeg,:NonPos,:SOC,:SOCRotated,:ExpPrimal]
 
-function MathProgBase.setwarmstart!(m::NonlinearToConicBridge, x) 
+function MathProgBase.setwarmstart!(m::NonlinearToConicBridge, x)
     x_expanded = copy(x)
     val = m.b - m.A_ini*x
     nonlinear_cones = 0
