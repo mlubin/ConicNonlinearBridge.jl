@@ -113,16 +113,16 @@ function MathProgBase.loadproblem!(m::NonlinearToConicBridge, c, A, b, constr_co
             end
         elseif cone == :SOC
             setlowerbound(x[ind[1]], 0.0)
-            if m.disaggregate_soc && length(ind) > 3
+            if m.disaggregate_soc && length(ind) >= 3
                 socvar = @variable(nlp_model, [2:length(ind)], lowerbound = 0)
                 for k in 2:length(ind)
                     if m.soc_as_quadratic
-                        @NLconstraint(nlp_model, x[ind[k]]^2 ≤ socvar[k]*x[ind[1]])
+                        @NLconstraint(nlp_model, x[ind[k]]^2 <= socvar[k]*x[ind[1]])
                     else
-                        @NLconstraint(nlp_model, x[ind[k]]^2/x[ind[1]] ≤ socvar[k])
+                        @NLconstraint(nlp_model, x[ind[k]]^2/x[ind[1]] <= socvar[k])
                     end
                 end
-                @constraint(nlp_model, sum(socvar) ≤ x[ind[1]])
+                @constraint(nlp_model, sum(socvar) <= x[ind[1]])
             else
                 if m.soc_as_quadratic
                     @NLconstraint(nlp_model, sum(x[i]^2 for i in ind[2:length(ind)]) <= x[ind[1]]^2)
