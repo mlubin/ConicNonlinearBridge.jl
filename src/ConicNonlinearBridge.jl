@@ -7,9 +7,6 @@ using JuMP
 using Compat.LinearAlgebra
 using Compat.SparseArrays
 
-if VERSION < v"0.7.0-"
-end
-
 if VERSION > v"0.7.0-"
     # this is required because findall return type changed in v0.7
     function SparseArrays.findnz(A::AbstractMatrix)
