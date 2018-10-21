@@ -1,6 +1,7 @@
 # ConicNonlinearBridge
 
 [![Build Status](https://travis-ci.org/mlubin/ConicNonlinearBridge.jl.svg?branch=master)](https://travis-ci.org/mlubin/ConicNonlinearBridge.jl)
+[![codecov](https://codecov.io/gh/mlubin/ConicNonlinearBridge.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/mlubin/ConicNonlinearBridge.jl)
 
 This package implements a wrapper to allow derivative-based nonlinear solvers to function as [conic solvers](http://mathprogbasejl.readthedocs.org/en/latest/conic.html), in particular to be used from Convex.jl.
 

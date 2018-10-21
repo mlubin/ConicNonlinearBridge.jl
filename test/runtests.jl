@@ -1,9 +1,24 @@
 using ConicNonlinearBridge
 using MathProgBase
 using Ipopt
-using Base.Test
 
-include(Pkg.dir("MathProgBase", "test", "conicinterface.jl"))
+using Compat.Test
+using Compat.LinearAlgebra
+using Compat.SparseArrays
+
+
+if VERSION < v"0.7.0-"
+    mpb_path = Pkg.dir("MathProgBase")
+end
+
+if VERSION > v"0.7.0-"
+    mpb_path = joinpath(dirname(pathof(MathProgBase)), "..")
+end
+
+
+include(joinpath(mpb_path, "test", "conicinterface.jl"))
+
+@testset "ConicNonlinearBridge Tests" begin
 
 @testset "linear and exponential cone tests (remove_single_rows is $remove_single_rows)" for remove_single_rows in [true, false]
     solver = ConicNLPWrapper(nlp_solver=IpoptSolver(print_level=0), remove_single_rows=remove_single_rows)
@@ -29,13 +44,13 @@ end
     solver = ConicNLPWrapper(nlp_solver=IpoptSolver(print_level=0))
     @test issubset([:Free, :Zero, :NonNeg, :NonPos, :SOC, :SOCRotated, :ExpPrimal], MathProgBase.supportedcones(solver))
     m = MathProgBase.ConicModel(solver)
-    MathProgBase.loadproblem!(m, [0, -2, -1], [1 0 0; -eye(3)], [1, 0, 0, 0], [(:Zero, 1), (:SOC, 2:4)], [(:Free, 1:3)])
+    MathProgBase.loadproblem!(m, [0, -2, -1], [1 0 0; Matrix(-1.0I, 3, 3)], [1, 0, 0, 0], [(:Zero, 1), (:SOC, 2:4)], [(:Free, 1:3)])
     MathProgBase.setvartype!(m, [:Cont, :Bin, :Int])
     MathProgBase.setwarmstart!(m, [3, 4, 2])
     @test m.nlp_model.colCat[1:3] == [:Cont, :Bin, :Int]
     @test m.solution[1:3] == [3, 4, 2]
     @test MathProgBase.numvar(m) == 3
-    @show MathProgBase.numconstr(m) == 4
+    @test MathProgBase.numconstr(m) == 4
 
     # make variables continuous and solve
     MathProgBase.setvartype!(m, [:Cont, :Cont, :Cont])
@@ -45,3 +60,6 @@ end
     @test MathProgBase.getobjval(m) ≈ -2.236067 atol=1e-4 rtol=1e-4
     MathProgBase.freemodel!(m)
 end
+
+end
+

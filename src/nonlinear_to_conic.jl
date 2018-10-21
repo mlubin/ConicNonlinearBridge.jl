@@ -2,7 +2,7 @@
 # The translation is lossy...
 # Authors: Emre Yamangil and Miles Lubin
 
-type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
+mutable struct NonlinearToConicBridge <: MathProgBase.AbstractConicModel
     # SOLUTION DATA
     solution::Vector{Float64}                       # Vector containing solution
     status                                          # Termination status of the nlp_solver
@@ -36,7 +36,7 @@ type NonlinearToConicBridge <: MathProgBase.AbstractConicModel
 end
 
 export ConicNLPWrapper
-immutable ConicNLPWrapper <: MathProgBase.AbstractMathProgSolver
+struct ConicNLPWrapper <: MathProgBase.AbstractMathProgSolver
     nlp_solver::MathProgBase.AbstractMathProgSolver
     remove_single_rows
     disaggregate_soc
@@ -148,7 +148,9 @@ function MathProgBase.loadproblem!(m::NonlinearToConicBridge, c, A, b, constr_co
     # *************** PREPROCESS *******************
     constr_cones_map = [:NoCone for i in 1:numConstr]
     for (cone, ind) in new_constr_cones
-        constr_cones_map[ind] = cone
+        for i in ind
+            constr_cones_map[i] = cone
+        end
     end
 
     nonZeroElements = [Any[] for i in 1:numConstr] # by row
@@ -184,7 +186,7 @@ function MathProgBase.loadproblem!(m::NonlinearToConicBridge, c, A, b, constr_co
     end
 
     rowIndicator = [true for i in 1:numConstr]
-    A_byrow = A'
+    A_byrow = copy(A')
     A_colidx = rowvals(A_byrow)
     A_vals = nonzeros(A_byrow)
     for (cone,ind) in new_constr_cones
