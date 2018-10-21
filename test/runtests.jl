@@ -21,4 +21,15 @@ end
     end
 end
 
+@testset "variable types test" begin
+    # min 0x - 2y - 1z
+    #  st  x == 1, x >= norm(y, z)
+    #      x continuous, y binary, z integer
+    solver = ConicNLPWrapper(nlp_solver=IpoptSolver(print_level=0))
+    m = MathProgBase.ConicModel(solver)
+    MathProgBase.loadproblem!(m, [0, -2, -1], [1 0 0], [1], [(:Zero, 1)], [(:SOC, 1:3)])
+    MathProgBase.setvartype!(m, [:Cont, :Bin, :Int])
+    @test m.nlp_model.colCat == Symbol[:Cont, :Bin, :Int]
+end
+
 return nothing
